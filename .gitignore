@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+
+# Cached KRX listing (re-downloaded daily)
+data/krx_listing.csv
