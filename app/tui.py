@@ -180,6 +180,8 @@ class App:
 
     def action_watch(self) -> None:
         """Enter live auto-refresh mode until interrupted with Ctrl+C."""
+        from . import news_service  # lazy import — avoids hard dep at startup
+
         watchlist = storage.load_watchlist()
         if not watchlist:
             self._notify("[yellow][INFO] 관심 종목이 비어 있습니다.[/yellow]")
@@ -187,10 +189,18 @@ class App:
 
         interval = settings.get_watch_interval()
         codes = [entry["code"] for entry in watchlist]
+
+        poller = news_service.NewsPoller(watchlist)
+        poller.start()
+
         try:
             while True:
                 self.quotes = get_quotes(codes)
                 rows = [self._row_for(entry) for entry in watchlist]
+                news_items = news_service.get_cached_news()
+                loading = news_service.is_loading()
+                secs_left = news_service.seconds_until_next_fetch()
+
                 self.console.clear()
                 self.console.print(
                     Panel.fit(
@@ -199,43 +209,89 @@ class App:
                     )
                 )
                 self.console.print(utils.build_watchlist_table(rows))
+                self.console.print()
+                utils.render_news_section(self.console, news_items, loading)
+
+                if loading and not news_items:
+                    news_status = "뉴스 로딩 중..."
+                elif secs_left == 0:
+                    news_status = "뉴스 갱신 중..."
+                else:
+                    news_status = f"뉴스 {secs_left // 60:02d}:{secs_left % 60:02d} 후 갱신"
+
                 self.console.print(
-                    f"\n[dim]{interval}초마다 갱신됩니다. "
-                    "메뉴로 돌아가려면 Ctrl+C 를 누르세요.[/dim]"
+                    f"[dim]{interval}초마다 갱신 | {news_status} | "
+                    "Ctrl+C 로 메뉴 복귀[/dim]"
                 )
                 time.sleep(interval)
         except KeyboardInterrupt:
-            # Normal exit path from watch mode back to the main menu.
+            poller.stop()
             return
 
     def action_settings(self) -> None:
         """Let the user view and change configurable settings."""
-        current = settings.get_watch_interval()
+        self.console.print("\n[bold]설정[/bold]\n")
         self.console.print(
-            f"\n[bold]설정[/bold]  현재 감시 갱신 주기: [cyan]{current}초[/cyan]"
+            f"  [bold][1][/bold] 시세 갱신 주기   "
+            f"[cyan]{settings.get_watch_interval():>5}초[/cyan]"
+            f"  [dim]({settings.MIN_WATCH_INTERVAL} ~ {settings.MAX_WATCH_INTERVAL}초)[/dim]"
         )
         self.console.print(
-            f"[dim]({settings.MIN_WATCH_INTERVAL} ~ {settings.MAX_WATCH_INTERVAL}초, "
-            "빈 값이면 변경 안 함)[/dim]"
+            f"  [bold][2][/bold] 뉴스 갱신 주기   "
+            f"[cyan]{settings.get_news_interval():>5}초[/cyan]"
+            f"  [dim]({settings.MIN_NEWS_INTERVAL} ~ {settings.MAX_NEWS_INTERVAL}초)[/dim]"
         )
+        self.console.print(
+            f"  [bold][3][/bold] 최대 뉴스 개수   "
+            f"[cyan]{settings.get_max_news():>5}건[/cyan]"
+            f"  [dim]({settings.MIN_MAX_NEWS} ~ {settings.MAX_MAX_NEWS}건)[/dim]"
+        )
+        self.console.print("\n  [dim][0] 취소[/dim]\n")
 
-        raw = Prompt.ask("새 갱신 주기(초)", default="").strip()
+        choice = self._ask_index("변경할 항목 선택", max_index=3, allow_zero=True)
+        if choice is None or choice == 0:
+            return
+
+        if choice == 1:
+            self._change_setting(
+                label="시세 갱신 주기(초)",
+                current=settings.get_watch_interval(),
+                setter=settings.set_watch_interval,
+                unit="초",
+            )
+        elif choice == 2:
+            self._change_setting(
+                label="뉴스 갱신 주기(초)",
+                current=settings.get_news_interval(),
+                setter=settings.set_news_interval,
+                unit="초",
+            )
+        elif choice == 3:
+            self._change_setting(
+                label="최대 뉴스 개수(건)",
+                current=settings.get_max_news(),
+                setter=settings.set_max_news,
+                unit="건",
+            )
+
+    def _change_setting(self, label: str, current: int, setter: Any, unit: str) -> None:
+        """Prompt for a new integer value, save it, and notify the user."""
+        self.console.print(f"[dim]현재값: {current}{unit}  (빈 값이면 변경 안 함)[/dim]")
+        raw = Prompt.ask(f"새 {label}", default="").strip()
         if not raw:
             return
         try:
-            seconds = int(raw)
+            value = int(raw)
         except ValueError:
             self._notify("[red]숫자를 입력하세요.[/red]")
             return
-
-        saved = settings.set_watch_interval(seconds)
-        if saved != seconds:
+        saved = setter(value)
+        if saved != value:
             self._notify(
-                f"[yellow][INFO] 허용 범위로 조정되어 {saved}초로 저장했습니다."
-                "[/yellow]"
+                f"[yellow][INFO] 허용 범위로 조정되어 {saved}{unit}로 저장했습니다.[/yellow]"
             )
         else:
-            self._notify(f"[green][INFO] 감시 갱신 주기를 {saved}초로 저장했습니다.[/green]")
+            self._notify(f"[green][INFO] {label.split('(')[0].strip()}을(를) {saved}{unit}로 저장했습니다.[/green]")
 
     # ------------------------------------------------------------------
     # Shared helpers

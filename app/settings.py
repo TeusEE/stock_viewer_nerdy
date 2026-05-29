@@ -1,7 +1,7 @@
 """User-configurable settings, persisted to ``data/settings.json``.
 
-Currently holds the watch-mode refresh interval. Values are validated and
-clamped to a sane range so a bad config can never break the app.
+Holds watch-mode refresh interval, news refresh interval, and max news count.
+All values are validated and clamped so a bad config never breaks the app.
 """
 
 from __future__ import annotations
@@ -19,7 +19,21 @@ DEFAULT_WATCH_INTERVAL = 5
 MIN_WATCH_INTERVAL = 1
 MAX_WATCH_INTERVAL = 3600
 
-_DEFAULTS: Dict[str, Any] = {"watch_interval": DEFAULT_WATCH_INTERVAL}
+# News-interval bounds (seconds).
+DEFAULT_NEWS_INTERVAL = 300
+MIN_NEWS_INTERVAL = 60
+MAX_NEWS_INTERVAL = 3600
+
+# Max-news-count bounds.
+DEFAULT_MAX_NEWS = 5
+MIN_MAX_NEWS = 1
+MAX_MAX_NEWS = 10
+
+_DEFAULTS: Dict[str, Any] = {
+    "watch_interval": DEFAULT_WATCH_INTERVAL,
+    "news_interval": DEFAULT_NEWS_INTERVAL,
+    "max_news": DEFAULT_MAX_NEWS,
+}
 
 
 def _ensure_data_dir() -> None:
@@ -28,44 +42,89 @@ def _ensure_data_dir() -> None:
 
 def load_settings() -> Dict[str, Any]:
     """Return all settings merged over defaults (missing keys filled in)."""
-    settings = dict(_DEFAULTS)
+    cfg = dict(_DEFAULTS)
     if os.path.exists(_SETTINGS_PATH):
         try:
             with open(_SETTINGS_PATH, "r", encoding="utf-8") as handle:
                 data = json.load(handle)
             if isinstance(data, dict):
-                settings.update(data)
+                cfg.update(data)
         except (json.JSONDecodeError, OSError):
             pass
-    return settings
+    return cfg
 
 
-def save_settings(settings: Dict[str, Any]) -> None:
+def save_settings(cfg: Dict[str, Any]) -> None:
     """Persist the given settings dict to disk as JSON."""
     _ensure_data_dir()
     with open(_SETTINGS_PATH, "w", encoding="utf-8") as handle:
-        json.dump(settings, handle, ensure_ascii=False, indent=2)
+        json.dump(cfg, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
 
 
-def _clamp_interval(value: Any) -> int:
-    """Coerce a value into a valid watch interval, falling back to default."""
+# ---------------------------------------------------------------------------
+# Watch interval
+# ---------------------------------------------------------------------------
+def _clamp(value: Any, default: int, lo: int, hi: int) -> int:
     try:
-        seconds = int(value)
+        n = int(value)
     except (TypeError, ValueError):
-        return DEFAULT_WATCH_INTERVAL
-    return max(MIN_WATCH_INTERVAL, min(MAX_WATCH_INTERVAL, seconds))
+        return default
+    return max(lo, min(hi, n))
 
 
 def get_watch_interval() -> int:
-    """Return the configured watch refresh interval in seconds."""
-    return _clamp_interval(load_settings().get("watch_interval"))
+    return _clamp(
+        load_settings().get("watch_interval"),
+        DEFAULT_WATCH_INTERVAL,
+        MIN_WATCH_INTERVAL,
+        MAX_WATCH_INTERVAL,
+    )
 
 
 def set_watch_interval(seconds: int) -> int:
-    """Persist a new watch interval (clamped) and return the stored value."""
-    value = _clamp_interval(seconds)
-    settings = load_settings()
-    settings["watch_interval"] = value
-    save_settings(settings)
+    value = _clamp(seconds, DEFAULT_WATCH_INTERVAL, MIN_WATCH_INTERVAL, MAX_WATCH_INTERVAL)
+    cfg = load_settings()
+    cfg["watch_interval"] = value
+    save_settings(cfg)
+    return value
+
+
+# ---------------------------------------------------------------------------
+# News interval
+# ---------------------------------------------------------------------------
+def get_news_interval() -> int:
+    return _clamp(
+        load_settings().get("news_interval"),
+        DEFAULT_NEWS_INTERVAL,
+        MIN_NEWS_INTERVAL,
+        MAX_NEWS_INTERVAL,
+    )
+
+
+def set_news_interval(seconds: int) -> int:
+    value = _clamp(seconds, DEFAULT_NEWS_INTERVAL, MIN_NEWS_INTERVAL, MAX_NEWS_INTERVAL)
+    cfg = load_settings()
+    cfg["news_interval"] = value
+    save_settings(cfg)
+    return value
+
+
+# ---------------------------------------------------------------------------
+# Max news count
+# ---------------------------------------------------------------------------
+def get_max_news() -> int:
+    return _clamp(
+        load_settings().get("max_news"),
+        DEFAULT_MAX_NEWS,
+        MIN_MAX_NEWS,
+        MAX_MAX_NEWS,
+    )
+
+
+def set_max_news(count: int) -> int:
+    value = _clamp(count, DEFAULT_MAX_NEWS, MIN_MAX_NEWS, MAX_MAX_NEWS)
+    cfg = load_settings()
+    cfg["max_news"] = value
+    save_settings(cfg)
     return value

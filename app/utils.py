@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
@@ -93,3 +94,33 @@ def build_search_table(results: List[Dict[str, str]]) -> Table:
             item.get("market", ""),
         )
     return table
+
+
+# ---------------------------------------------------------------------------
+# News section rendering
+# ---------------------------------------------------------------------------
+def render_news_section(console: Any, news_items: List[Any], loading: bool = False) -> None:
+    """Print the news section (divider + items) directly to the given console."""
+    console.print(Rule("[dim]관련 뉴스[/dim]", style="dim"))
+
+    if loading and not news_items:
+        console.print("[dim italic]  뉴스 로딩 중...[/dim italic]")
+        console.print()
+        return
+
+    if not news_items:
+        console.print()
+        return
+
+    for i, item in enumerate(news_items, 1):
+        line = Text()
+        line.append(f"  {i}  ", style="dim")
+        line.append(item.title, style="bold white")
+        line.append("   ", style="")
+        line.append(item.source, style="dim cyan")
+        line.append("  ", style="")
+        line.append(item.published_at, style="dim")
+        console.print(line)
+        if item.url:
+            console.print(f"     [dim]{item.url}[/dim]")
+    console.print()

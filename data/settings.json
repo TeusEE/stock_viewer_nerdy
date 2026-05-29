@@ -1,3 +1,5 @@
 {
-  "watch_interval": 5
+  "watch_interval": 5,
+  "news_interval": 300,
+  "max_news": 5
 }

@@ -1,2 +1,4 @@
 finance-datareader
 rich
+requests
+beautifulsoup4
