@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+from rich.rule import Rule
+from rich.text import Text
 
 from . import settings
 from . import storage
@@ -21,13 +23,13 @@ from . import utils
 from .stock_service import get_quotes, get_stock_info, search_stocks, StockServiceError
 
 _MENU = (
-    "[bold]\\[a][/bold] 추가   "
-    "[bold]\\[e][/bold] 수정   "
-    "[bold]\\[d][/bold] 삭제   "
-    "[bold]\\[w][/bold] 감시   "
-    "[bold]\\[r][/bold] 새로고침   "
-    "[bold]\\[s][/bold] 설정   "
-    "[bold]\\[q][/bold] 종료"
+    "[bold rgb(255,140,0)]\\[A][/bold rgb(255,140,0)][dim] 추가   [/dim]"
+    "[bold rgb(255,140,0)]\\[E][/bold rgb(255,140,0)][dim] 수정   [/dim]"
+    "[bold rgb(255,140,0)]\\[D][/bold rgb(255,140,0)][dim] 삭제   [/dim]"
+    "[bold rgb(255,140,0)]\\[W][/bold rgb(255,140,0)][dim] 감시   [/dim]"
+    "[bold rgb(255,140,0)]\\[R][/bold rgb(255,140,0)][dim] 새로고침   [/dim]"
+    "[bold rgb(255,140,0)]\\[S][/bold rgb(255,140,0)][dim] 설정   [/dim]"
+    "[bold rgb(255,140,0)]\\[Q][/bold rgb(255,140,0)][dim] 종료[/dim]"
 )
 
 
@@ -81,12 +83,13 @@ class App:
         """Clear the screen and draw the header, table, and menu."""
         self.console.clear()
         self.console.print(
-            Panel.fit("[bold cyan]주식 관심종목[/bold cyan]", border_style="cyan")
+            Panel.fit("[bold rgb(255,140,0)]주식 관심종목[/bold rgb(255,140,0)]", border_style="rgb(255,140,0)")
         )
 
         watchlist = storage.load_watchlist()
         if not watchlist:
-            self.console.print("[yellow][INFO] 관심 종목이 비어 있습니다.[/yellow]\n")
+            self.console.print(Rule("WATCHLIST", style="rgb(80,80,80)", align="left"))
+            self.console.print("[rgb(100,100,100)]  No stocks in watchlist. Press [A] to add.[/rgb(100,100,100)]\n")
         else:
             rows = [self._row_for(entry) for entry in watchlist]
             self.console.print(utils.build_watchlist_table(rows))
@@ -135,9 +138,9 @@ class App:
                 self.quotes[code] = get_stock_info(code)
             except StockServiceError:
                 pass
-            self._notify(f"[green][INFO] {name} 추가 완료.[/green]")
+            self._notify(f"[rgb(255,255,0)][INFO] {name} 추가 완료.[/rgb(255,255,0)]")
         else:
-            self._notify("[yellow][INFO] 이미 등록된 종목입니다.[/yellow]")
+            self._notify("[rgb(255,255,0)][INFO] 이미 등록된 종목입니다.[/rgb(255,255,0)]")
 
     def action_edit(self) -> None:
         """Pick a watchlist entry and replace it with a newly searched stock."""
@@ -151,7 +154,7 @@ class App:
         if pick is None:
             return
         if pick["code"] == old["code"]:
-            self._notify("[yellow][INFO] 변경 사항이 없습니다.[/yellow]")
+            self._notify("[rgb(255,255,0)][INFO] 변경 사항이 없습니다.[/rgb(255,255,0)]")
             return
 
         if storage.update_stock(old["code"], pick["code"], pick["name"]):
@@ -161,10 +164,10 @@ class App:
             except StockServiceError:
                 pass
             self._notify(
-                f"[green][INFO] {old['name']} → {pick['name']} 수정 완료.[/green]"
+                f"[rgb(255,255,0)][INFO] {old['name']} → {pick['name']} 수정 완료.[/rgb(255,255,0)]"
             )
         else:
-            self._notify("[red][ERROR] 수정에 실패했습니다.[/red]")
+            self._notify("[bold red][ERROR] 수정에 실패했습니다.[/bold red]")
 
     def action_delete(self) -> None:
         """Pick a watchlist entry and remove it."""
@@ -174,9 +177,9 @@ class App:
 
         if storage.remove_stock(entry["code"]):
             self.quotes.pop(entry["code"], None)
-            self._notify(f"[green][INFO] {entry['name']} 삭제 완료.[/green]")
+            self._notify(f"[rgb(255,255,0)][INFO] {entry['name']} 삭제 완료.[/rgb(255,255,0)]")
         else:
-            self._notify("[yellow][INFO] 관심 종목에 없습니다.[/yellow]")
+            self._notify("[rgb(255,255,0)][INFO] 관심 종목에 없습니다.[/rgb(255,255,0)]")
 
     def action_watch(self) -> None:
         """Enter live auto-refresh mode until interrupted with Ctrl+C."""
@@ -184,7 +187,7 @@ class App:
 
         watchlist = storage.load_watchlist()
         if not watchlist:
-            self._notify("[yellow][INFO] 관심 종목이 비어 있습니다.[/yellow]")
+            self._notify("[rgb(255,255,0)][INFO] 관심 종목이 비어 있습니다.[/rgb(255,255,0)]")
             return
 
         interval = settings.get_watch_interval()
@@ -204,8 +207,9 @@ class App:
                 self.console.clear()
                 self.console.print(
                     Panel.fit(
-                        "[bold cyan]주식 관심종목 (실시간 감시)[/bold cyan]",
-                        border_style="cyan",
+                        "[bold rgb(255,140,0)]주식 관심종목[/bold rgb(255,140,0)]"
+                        "  [dim]WATCH MODE[/dim]",
+                        border_style="rgb(255,140,0)",
                     )
                 )
                 self.console.print(utils.build_watchlist_table(rows))
@@ -213,16 +217,20 @@ class App:
                 utils.render_news_section(self.console, news_items, loading)
 
                 if loading and not news_items:
-                    news_status = "뉴스 로딩 중..."
+                    news_status = "NEWS LOADING..."
                 elif secs_left == 0:
-                    news_status = "뉴스 갱신 중..."
+                    news_status = "NEWS UPDATING..."
                 else:
-                    news_status = f"뉴스 {secs_left // 60:02d}:{secs_left % 60:02d} 후 갱신"
+                    news_status = f"NEWS IN {secs_left // 60:02d}:{secs_left % 60:02d}"
 
-                self.console.print(
-                    f"[dim]{interval}초마다 갱신 | {news_status} | "
-                    "Ctrl+C 로 메뉴 복귀[/dim]"
-                )
+                self.console.print(Rule(style="rgb(60,60,60)"))
+                status = Text()
+                status.append(f"{interval}s REFRESH", style="rgb(255,165,0)")
+                status.append("  |  ", style="dim")
+                status.append(news_status, style="rgb(255,165,0)")
+                status.append("  |  ", style="dim")
+                status.append("Ctrl+C → MENU", style="dim")
+                self.console.print(status)
                 time.sleep(interval)
         except KeyboardInterrupt:
             poller.stop()
@@ -230,68 +238,68 @@ class App:
 
     def action_settings(self) -> None:
         """Let the user view and change configurable settings."""
-        self.console.print("\n[bold]설정[/bold]\n")
+        self.console.print("\n[bold rgb(255,140,0)]SETTINGS[/bold rgb(255,140,0)]\n")
         self.console.print(
-            f"  [bold][1][/bold] 시세 갱신 주기   "
-            f"[cyan]{settings.get_watch_interval():>5}초[/cyan]"
-            f"  [dim]({settings.MIN_WATCH_INTERVAL} ~ {settings.MAX_WATCH_INTERVAL}초)[/dim]"
+            f"  [bold rgb(255,140,0)][1][/bold rgb(255,140,0)] [dim]REFRESH INTERVAL  [/dim]"
+            f"[bold white]{settings.get_watch_interval():>5}s[/bold white]"
+            f"  [dim]({settings.MIN_WATCH_INTERVAL} ~ {settings.MAX_WATCH_INTERVAL}s)[/dim]"
         )
         self.console.print(
-            f"  [bold][2][/bold] 뉴스 갱신 주기   "
-            f"[cyan]{settings.get_news_interval():>5}초[/cyan]"
-            f"  [dim]({settings.MIN_NEWS_INTERVAL} ~ {settings.MAX_NEWS_INTERVAL}초)[/dim]"
+            f"  [bold rgb(255,140,0)][2][/bold rgb(255,140,0)] [dim]NEWS INTERVAL     [/dim]"
+            f"[bold white]{settings.get_news_interval():>5}s[/bold white]"
+            f"  [dim]({settings.MIN_NEWS_INTERVAL} ~ {settings.MAX_NEWS_INTERVAL}s)[/dim]"
         )
         self.console.print(
-            f"  [bold][3][/bold] 최대 뉴스 개수   "
-            f"[cyan]{settings.get_max_news():>5}건[/cyan]"
-            f"  [dim]({settings.MIN_MAX_NEWS} ~ {settings.MAX_MAX_NEWS}건)[/dim]"
+            f"  [bold rgb(255,140,0)][3][/bold rgb(255,140,0)] [dim]MAX NEWS COUNT    [/dim]"
+            f"[bold white]{settings.get_max_news():>5}[/bold white]"
+            f"  [dim]({settings.MIN_MAX_NEWS} ~ {settings.MAX_MAX_NEWS} items)[/dim]"
         )
-        self.console.print("\n  [dim][0] 취소[/dim]\n")
+        self.console.print("\n  [dim][0] CANCEL[/dim]\n")
 
-        choice = self._ask_index("변경할 항목 선택", max_index=3, allow_zero=True)
+        choice = self._ask_index("Select", max_index=3, allow_zero=True)
         if choice is None or choice == 0:
             return
 
         if choice == 1:
             self._change_setting(
-                label="시세 갱신 주기(초)",
+                label="REFRESH INTERVAL",
                 current=settings.get_watch_interval(),
                 setter=settings.set_watch_interval,
-                unit="초",
+                unit="s",
             )
         elif choice == 2:
             self._change_setting(
-                label="뉴스 갱신 주기(초)",
+                label="NEWS INTERVAL",
                 current=settings.get_news_interval(),
                 setter=settings.set_news_interval,
-                unit="초",
+                unit="s",
             )
         elif choice == 3:
             self._change_setting(
-                label="최대 뉴스 개수(건)",
+                label="MAX NEWS COUNT",
                 current=settings.get_max_news(),
                 setter=settings.set_max_news,
-                unit="건",
+                unit=" items",
             )
 
     def _change_setting(self, label: str, current: int, setter: Any, unit: str) -> None:
         """Prompt for a new integer value, save it, and notify the user."""
-        self.console.print(f"[dim]현재값: {current}{unit}  (빈 값이면 변경 안 함)[/dim]")
-        raw = Prompt.ask(f"새 {label}", default="").strip()
+        self.console.print(f"[dim]Current: {current}{unit}  (leave blank to cancel)[/dim]")
+        raw = Prompt.ask(f"New {label}", default="").strip()
         if not raw:
             return
         try:
             value = int(raw)
         except ValueError:
-            self._notify("[red]숫자를 입력하세요.[/red]")
+            self._notify("[bold red][ERROR] Enter a number.[/bold red]")
             return
         saved = setter(value)
         if saved != value:
             self._notify(
-                f"[yellow][INFO] 허용 범위로 조정되어 {saved}{unit}로 저장했습니다.[/yellow]"
+                f"[rgb(255,255,0)][INFO] Out of range — clamped to {saved}{unit}.[/rgb(255,255,0)]"
             )
         else:
-            self._notify(f"[green][INFO] {label.split('(')[0].strip()}을(를) {saved}{unit}로 저장했습니다.[/green]")
+            self._notify(f"[rgb(255,255,0)][INFO] {label} set to {saved}{unit}.[/rgb(255,255,0)]")
 
     # ------------------------------------------------------------------
     # Shared helpers
@@ -313,13 +321,13 @@ class App:
 
         if not results:
             self._notify(
-                f"[yellow][INFO] '{keyword}' 와(과) 일치하는 종목이 없습니다.[/yellow]"
+                f"[rgb(255,255,0)][INFO] '{keyword}' 와(과) 일치하는 종목이 없습니다.[/rgb(255,255,0)]"
             )
             return None
 
         self.console.print()
         self.console.print(utils.build_search_table(results))
-        self.console.print("[dim]0) 취소[/dim]\n")
+        self.console.print("[dim]  [0] CANCEL[/dim]\n")
 
         choice = self._ask_index(
             "번호 선택", max_index=len(results), allow_zero=True
@@ -333,13 +341,13 @@ class App:
         """Show the watchlist numbered and return the chosen {code, name}."""
         watchlist = storage.load_watchlist()
         if not watchlist:
-            self._notify("[yellow][INFO] 관심 종목이 비어 있습니다.[/yellow]")
+            self._notify("[rgb(255,255,0)][INFO] 관심 종목이 비어 있습니다.[/rgb(255,255,0)]")
             return None
 
         rows = [self._row_for(entry) for entry in watchlist]
         self.console.print()
         self.console.print(utils.build_watchlist_table(rows))
-        self.console.print("[dim]0) 취소[/dim]\n")
+        self.console.print("[dim]  [0] CANCEL[/dim]\n")
 
         choice = self._ask_index(prompt, max_index=len(watchlist), allow_zero=True)
         if choice is None or choice == 0:

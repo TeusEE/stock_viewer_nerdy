@@ -26,6 +26,7 @@
 | M4 | 감시 갱신 주기 설정 기능 (`settings.json` + 설정 메뉴) | ✅ 완료 |
 | M5 | 문서화 (도메인 정의서/PRD/사용자 시나리오/와이어프레임/플랜) | ✅ 완료 |
 | M6 | 감시 모드 뉴스 표시 (Naver Finance / Yahoo Finance / Bloomberg, 5분 주기, 최대 5건) | ✅ 완료 |
+| M6.5 | Bloomberg Terminal 스타일 적용 (주황 강조색, 영문 UI 크롬, 상태바 개편) — `docs/06_style_guide.md` | ✅ 완료 |
 | M7 | 검색 보완(영문명 별칭/코드 검색), 가격 알림, CSV export | ⏳ 예정 |
 | M8 | PyInstaller EXE 빌드 및 배포 패키징 | ⏳ 예정 |
 
@@ -72,9 +73,10 @@
 
 ### 3.5 문서/배포
 - [x] README (한글)
-- [x] docs/ (도메인 정의서, PRD, 시나리오, 와이어프레임, 플랜)
+- [x] docs/ 6종 (도메인 정의서, PRD, 시나리오, 와이어프레임, 플랜, Bloomberg 스타일 가이드)
 - [x] requirements.txt에 `requests`, `beautifulsoup4` 추가 (M6)
 - [x] README 뉴스 기능 항목 추가 (M6)
+- [x] Bloomberg 스타일 가이드 작성 + 전체 적용 (M6.5)
 - [ ] EXE 빌드/배포 가이드 검증 (M8)
 
 ---

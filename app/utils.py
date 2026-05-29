@@ -39,7 +39,7 @@ def change_text(value: Any) -> Text:
     if number > 0:
         return Text(label, style="bold red")
     if number < 0:
-        return Text(label, style="bold blue")
+        return Text(label, style="bold rgb(68,153,255)")
     return Text(label, style="dim")
 
 
@@ -52,18 +52,19 @@ def build_watchlist_table(rows: List[Dict[str, Any]]) -> Table:
     Each row dict has keys: name, code, price, change_percent, high, low.
     """
     table = Table(
-        title="관심 종목",
-        title_style="bold cyan",
-        header_style="bold",
+        title="WATCHLIST",
+        title_style="bold rgb(255,140,0)",
+        header_style="bold rgb(255,165,0)",
+        border_style="rgb(80,80,80)",
         expand=False,
     )
     table.add_column("#", justify="right", style="dim")
-    table.add_column("종목명", justify="left", style="bold")
-    table.add_column("코드", justify="left", style="dim")
-    table.add_column("현재가", justify="right")
-    table.add_column("등락률", justify="right")
-    table.add_column("고가", justify="right")
-    table.add_column("저가", justify="right")
+    table.add_column("NAME", justify="left", style="bold")
+    table.add_column("CODE", justify="left", style="rgb(170,170,170)")
+    table.add_column("PRICE", justify="right")
+    table.add_column("CHG%", justify="right")
+    table.add_column("HIGH", justify="right")
+    table.add_column("LOW", justify="right")
 
     for index, row in enumerate(rows, start=1):
         table.add_row(
@@ -80,11 +81,11 @@ def build_watchlist_table(rows: List[Dict[str, Any]]) -> Table:
 
 def build_search_table(results: List[Dict[str, str]]) -> Table:
     """Build a numbered rich Table of stock search suggestions."""
-    table = Table(header_style="bold", expand=False)
+    table = Table(header_style="bold rgb(255,165,0)", border_style="rgb(80,80,80)", expand=False)
     table.add_column("#", justify="right", style="dim")
-    table.add_column("종목명", justify="left", style="bold cyan")
-    table.add_column("코드", justify="left")
-    table.add_column("시장", justify="left", style="dim")
+    table.add_column("NAME", justify="left", style="bold rgb(255,140,0)")
+    table.add_column("CODE", justify="left")
+    table.add_column("MKT", justify="left", style="dim")
 
     for index, item in enumerate(results, start=1):
         table.add_row(
@@ -101,7 +102,7 @@ def build_search_table(results: List[Dict[str, str]]) -> Table:
 # ---------------------------------------------------------------------------
 def render_news_section(console: Any, news_items: List[Any], loading: bool = False) -> None:
     """Print the news section (divider + items) directly to the given console."""
-    console.print(Rule("[dim]관련 뉴스[/dim]", style="dim"))
+    console.print(Rule("[bold rgb(255,140,0)]  NEWS  [/bold rgb(255,140,0)]", style="rgb(80,80,80)"))
 
     if loading and not news_items:
         console.print("[dim italic]  뉴스 로딩 중...[/dim italic]")
@@ -109,18 +110,19 @@ def render_news_section(console: Any, news_items: List[Any], loading: bool = Fal
         return
 
     if not news_items:
+        console.print("[dim]  No news available.[/dim]")
         console.print()
         return
 
     for i, item in enumerate(news_items, 1):
         line = Text()
-        line.append(f"  {i}  ", style="dim")
+        line.append(f"  {i}  ", style="rgb(100,100,100)")
         line.append(item.title, style="bold white")
         line.append("   ", style="")
-        line.append(item.source, style="dim cyan")
+        line.append(item.source, style="rgb(255,165,0)")
         line.append("  ", style="")
         line.append(item.published_at, style="dim")
         console.print(line)
         if item.url:
-            console.print(f"     [dim]{item.url}[/dim]")
+            console.print(f"     [rgb(100,100,100)]{item.url}[/rgb(100,100,100)]")
     console.print()
